@@ -19,20 +19,7 @@ function Titulo(props) {
     )
 }
 
-// function HomePage() {
-//     return (
-//         <div>
-//             <GlobalStyle />
-//             <Title tag="h2">Boas vindas!</Title>
-//             <h2>Discord - Conversation</h2>
-
-//         </div>
-//     )
-// }
-//export default HomePage
-
 export default function PaginaInicial() {
-    //const username = 'FabinhoFlauzino';
     const [username, setUsername] = useState('FabinhoFlauzino');
     const roteamento = useRouter()
 
@@ -66,7 +53,7 @@ export default function PaginaInicial() {
               as="form"
               onSubmit={(e)=> {
                 e.preventDefault();
-                roteamento.push('/chat', { username })
+                roteamento.push(`/chat?username=${username}`)
               }}
               styleSheet={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

@@ -1,34 +1,65 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
-import React from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/router';
+import React, { useEffect } from 'react';
 import appConfig from '../config.json';
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
+
+
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1Z3Znd3licWN3ZGhsdHdieW5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTY4MTg5MDksImV4cCI6MTk3MjM5NDkwOX0.PPlkiYs80cFhJTE6bU5nTTT3ahdQ8c8_Qeqq902B87o";
+const SUPABASE_URL = "https://vugvgwybqcwdhltwbynf.supabase.co";
+
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+function escutaMensagensTempoReal(adicionaMensagem) {
+    return supabaseClient
+        .from('mensagens')
+        .on('INSERT', (response) => {
+            adicionaMensagem(response.new)
+        })
+        .subscribe()
+}
 
 export default function ChatPage() {
-  
+    const roteamento = useRouter();
+    const usuarioLogado = roteamento.query.username;
     const [mensagem, setMensagem] = React.useState('');
     const [listaDeMensagens, setListaDeMensagens] = React.useState([]);
 
-    /*
-    // Usuário
-    - Usuário digita no campo textarea
-    - Aperta enter para enviar
-    - Tem que adicionar o texto na listagem
-    
-    // Dev
-    - [X] Campo criado
-    - [X] Vamos usar o onChange usa o useState (ter if pra caso seja enter pra limpar a variavel)
-    - [X] Lista de mensagens 
-    */
+    useEffect(() => {
+        supabaseClient
+            .from('mensagens')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(({ data }) => {
+                setListaDeMensagens(data);
+            })
+
+        escutaMensagensTempoReal((novaMensagem) => {
+            setListaDeMensagens((listaAtual) => {
+                return [
+                    novaMensagem,
+                    ...listaAtual,
+                ]
+            });
+        });
+    }, [])
+
     function handleNovaMensagem(novaMensagem) {
         const mensagem = {
-            id: listaDeMensagens.length + 1,
-            de: 'Fabinho Flauzino',
+            de: usuarioLogado,
             texto: novaMensagem,
         };
 
-        setListaDeMensagens([
-            mensagem,
-            ...listaDeMensagens,
-        ]);
+        supabaseClient
+            .from('mensagens')
+            .insert([
+                mensagem,
+            ])
+            .then(({ data }) => {
+
+            })
+
         setMensagem('');
     }
 
@@ -70,13 +101,6 @@ export default function ChatPage() {
                     }}
                 >
                     <MessageList mensagens={listaDeMensagens} />
-                    {/* {listaDeMensagens.map((mensagemAtual) => {
-                        return (
-                            <li key={mensagemAtual.id}>
-                                {mensagemAtual.de}: {mensagemAtual.texto}
-                            </li>
-                        )
-                    })} */}
                     <Box
                         as="form"
                         styleSheet={{
@@ -107,6 +131,11 @@ export default function ChatPage() {
                                 backgroundColor: appConfig.theme.colors.neutrals[800],
                                 marginRight: '12px',
                                 color: appConfig.theme.colors.neutrals[200],
+                            }}
+                        />
+                        <ButtonSendSticker
+                            onStickerClick={(sticker) => {
+                                handleNovaMensagem(`:sticker: ${sticker}`);
                             }}
                         />
                     </Box>
@@ -174,7 +203,7 @@ function MessageList(props) {
                                     display: 'inline-block',
                                     marginRight: '8px',
                                 }}
-                                src={`https://github.com/FabinhoFlauzino.png`}
+                                src={`https://github.com/${(mensagem.de.replace(" ", ''))}.png`}
                             />
                             <Text tag="strong">
                                 {mensagem.de}
@@ -190,7 +219,11 @@ function MessageList(props) {
                                 {(new Date().toLocaleDateString())}
                             </Text>
                         </Box>
-                        {mensagem.texto}
+                        {
+                            mensagem.texto.startsWith(':sticker:') ?
+                                (<Image src={mensagem.texto.replace(':sticker:', '')} styleSheet={{width: '150px'}} />)
+                                : (mensagem.texto)
+                        }
                     </Text>
                 );
             })}
